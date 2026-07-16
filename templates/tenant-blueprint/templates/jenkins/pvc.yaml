@@ -1,0 +1,12 @@
+{{- if .Values.services.jenkins.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.tenant_id }}-jenkins-pvc
+spec:
+  storageClassName: managed-csi
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+{{- end }}

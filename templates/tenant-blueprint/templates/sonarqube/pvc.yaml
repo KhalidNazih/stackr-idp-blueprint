@@ -1,0 +1,23 @@
+{{- if .Values.services.sonarqube.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.tenant_id }}-postgresql-pvc
+spec:
+  storageClassName: managed-csi
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.tenant_id }}-sonarqube-pvc
+spec:
+  storageClassName: managed-csi
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+{{- end }}

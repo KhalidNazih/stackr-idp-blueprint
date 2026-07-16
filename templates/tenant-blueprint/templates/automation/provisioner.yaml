@@ -1,0 +1,191 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.tenant_id }}-provisioner-playbook
+  namespace: admin
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "2"
+data:
+  playbook.yml: |
+    # NOTE: This playbook uses "Nested Templating".
+    # Double braces with backticks (e.g., {{ `{{ var }}` }}) are used to escape 
+    # Ansible variables from Helm. This ensures Helm treats them as literal 
+    # strings and lets Ansible render them at runtime.
+    ---
+    - name: Provision Keycloak for Tenant
+      hosts: localhost
+      connection: local
+      vars:
+        keycloak_admin_user: "admin"
+        keycloak_admin_password: "{{ `{{ lookup('env', 'KEYCLOAK_ADMIN_PASSWORD') }}` }}"
+        keycloak_auth_url: "{{ .Values.platform.keycloak.internal_url }}"
+        keycloak_realm: "{{ .Values.platform.keycloak.realm }}"
+        tenant_id: "{{ .Values.tenant_id }}"
+        target_namespace: "{{ .Values.isolation.namespace }}"
+        public_url: "{{ .Values.platform.public_base_url }}"
+        creator_email: "{{ .Values.access.creator_email | default "" }}"
+        
+        services:
+          gitlab:
+            enabled: {{ .Values.services.gitlab.enabled | default false }}
+            port: {{ .Values.services.gitlab.node_port | default 0 }}
+          jenkins:
+            enabled: {{ .Values.services.jenkins.enabled | default false }}
+            port: {{ .Values.services.jenkins.node_port | default 0 }}
+          nexus:
+            enabled: {{ .Values.services.nexus.enabled | default false }}
+            port: {{ .Values.services.nexus.node_port | default 0 }}
+          sonarqube:
+            enabled: {{ .Values.services.sonarqube.enabled | default false }}
+            port: {{ .Values.services.sonarqube.node_port | default 0 }}
+
+      tasks:
+        - name: Ensure Target Namespace Exists
+          kubernetes.core.k8s:
+            state: present
+            definition:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: "{{ `{{ target_namespace }}` }}"
+
+        - name: Create Tenant Groups
+          community.general.keycloak_group:
+            auth_keycloak_url: "{{ `{{ keycloak_auth_url }}` }}"
+            auth_username: "{{ `{{ keycloak_admin_user }}` }}"
+            auth_password: "{{ `{{ keycloak_admin_password }}` }}"
+            auth_realm: "master"
+            realm: "{{ `{{ keycloak_realm }}` }}"
+            name: "{{ `{{ item }}` }}"
+            state: present
+          loop:
+            - "{{ .Values.access.groups.admins }}"
+            - "{{ .Values.access.groups.users }}"
+
+        - name: Create Groups Client Scope
+          community.general.keycloak_clientscope:
+            auth_keycloak_url: "{{ `{{ keycloak_auth_url }}` }}"
+            auth_username: "{{ `{{ keycloak_admin_user }}` }}"
+            auth_password: "{{ `{{ keycloak_admin_password }}` }}"
+            auth_realm: "master"
+            realm: "{{ `{{ keycloak_realm }}` }}"
+            name: "groups"
+            protocol: openid-connect
+            state: present
+            protocol_mappers:
+              - name: "group-membership"
+                protocol: openid-connect
+                protocolMapper: oidc-group-membership-mapper
+                config:
+                  full.path: "false"
+                  id.token.claim: "true"
+                  access.token.claim: "true"
+                  userinfo.token.claim: "true"
+                  claim.name: "groups"
+
+        - name: Configure OIDC Clients 
+          community.general.keycloak_client:
+            auth_keycloak_url: "{{ `{{ keycloak_auth_url }}` }}"
+            auth_username: "{{ `{{ keycloak_admin_user }}` }}"
+            auth_password: "{{ `{{ keycloak_admin_password }}` }}"
+            auth_realm: "master"
+            realm: "{{ `{{ keycloak_realm }}` }}"
+            client_id: "{{ `{{ tenant_id }}` }}-{{ `{{ item.key }}` }}"
+            state: present
+            enabled: true
+            protocol: openid-connect
+            public_client: false
+            standard_flow_enabled: true
+            redirect_uris:
+                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.<YOUR_TAILSCALE_IP>.nip.io/*"
+                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.<YOUR_TAILSCALE_IP>.nip.io/securityRealm/finishLogin"
+                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.<YOUR_TAILSCALE_IP>.nip.io/oauth2/callback"
+                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.<YOUR_TAILSCALE_IP>.nip.io/users/auth/openid_connect/callback"    
+            default_client_scopes:
+              - "groups"
+              - "profile"
+              - "email"
+            client_scopes_behavior: patch
+          loop: "{{ `{{ services | dict2items }}` }}"
+          when: "item.value.enabled and item.key != 'sonarqube'"
+
+        - name: Get Client Secrets
+          community.general.keycloak_clientsecret_info:
+            auth_keycloak_url: "{{ `{{ keycloak_auth_url }}` }}"
+            auth_username: "{{ `{{ keycloak_admin_user }}` }}"
+            auth_password: "{{ `{{ keycloak_admin_password }}` }}"
+            auth_realm: "master"
+            realm: "{{ `{{ keycloak_realm }}` }}"
+            client_id: "{{ `{{ tenant_id }}` }}-{{ `{{ item.key }}` }}"
+          loop: "{{ `{{ services | dict2items }}` }}"
+          when: "item.value.enabled and item.key != 'sonarqube'"
+          register: client_secrets_results
+
+        - name: Configure SonarQube SAML Client
+          community.general.keycloak_client:
+            auth_keycloak_url: "{{ `{{ keycloak_auth_url }}` }}"
+            auth_username: "{{ `{{ keycloak_admin_user }}` }}"
+            auth_password: "{{ `{{ keycloak_admin_password }}` }}"
+            auth_realm: "master"
+            realm: "{{ `{{ keycloak_realm }}` }}"
+            client_id: "{{ `{{ tenant_id }}` }}-sonarqube"
+            state: present
+            enabled: true
+            protocol: saml
+            attributes:
+              saml.server.signature: "true"
+              saml.assertion.signature: "true"
+              saml.force.post.binding: "true"
+            redirect_uris: ["http://sonar-{{ `{{ tenant_id }}` }}.<YOUR_TAILSCALE_IP>.nip.io/oauth2/callback/saml"]
+          when: services.sonarqube.enabled
+
+        - name: Get Admin Token 
+          ansible.builtin.uri:
+            url: "{{ `{{ keycloak_auth_url }}` }}/realms/master/protocol/openid-connect/token"
+            method: POST
+            body_format: form-urlencoded
+            body:
+              username: "{{ `{{ keycloak_admin_user }}` }}"
+              password: "{{ `{{ keycloak_admin_password }}` }}"
+              grant_type: password
+              client_id: admin-cli
+          register: admin_token_result
+
+        - name: Find User ID (Search by Email)
+          ansible.builtin.uri:
+            url: "{{ `{{ keycloak_auth_url }}` }}/admin/realms/{{ `{{ keycloak_realm }}` }}/users?email={{ `{{ creator_email }}` }}"
+            method: GET
+            headers:
+              Authorization: "Bearer {{ `{{ admin_token_result.json.access_token }}` }}"
+          register: user_info_result
+          when: creator_email != ""
+
+        - name: Add Creator to Admin Group
+          community.general.keycloak_user:
+            auth_keycloak_url: "{{ `{{ keycloak_auth_url }}` }}"
+            token: "{{ `{{ admin_token_result.json.access_token }}` }}"
+            realm: "{{ `{{ keycloak_realm }}` }}"
+            id: "{{ `{{ user_info_result.json[0].id }}` }}"
+            username: "{{ `{{ user_info_result.json[0].username }}` }}"
+            groups:
+              - name: "{{ .Values.access.groups.admins }}"
+                state: present
+            state: present
+          when: "creator_email != '' and user_info_result.json | length > 0"
+
+        - name: Store OIDC Secrets in OpenBao
+          community.hashi_vault.vault_kv2_write:
+            url: "http://openbao-svc.admin:8200"
+            auth_method: jwt
+            role_id: "tenant-role"
+            mount_point: "kubernetes"
+            jwt: "{{ `{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/token') }}` }}"
+            engine_mount_point: "secret"
+            path: "tenants/{{ `{{ tenant_id }}` }}/oidc"
+            data:
+              gitlab_secret: "{{ `{{ (client_secrets_results.results | selectattr('item.key', 'equalto', 'gitlab') | map(attribute='clientsecret_info.value') | first | default('')) }}` }}"
+              jenkins_secret: "{{ `{{ (client_secrets_results.results | selectattr('item.key', 'equalto', 'jenkins') | map(attribute='clientsecret_info.value') | first | default('')) }}` }}"
+              nexus_secret: "{{ `{{ (client_secrets_results.results | selectattr('item.key', 'equalto', 'nexus') | map(attribute='clientsecret_info.value') | first | default('')) }}` }}"
+              nexus_proxy_cookie: "very-long-cookie-secret-that-is-at-least-32-chars"

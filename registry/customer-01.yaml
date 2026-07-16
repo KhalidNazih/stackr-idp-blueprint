@@ -1,0 +1,42 @@
+tenant_id: "customer-01"
+display_name: "Customer Project 1"
+business_unit: "Telecom"
+environment: "dev"
+infrastructure:
+  cluster_server: "https://kubernetes.default.svc"
+isolation:
+  namespace: "customer-01-ns"
+platform:
+  public_base_url: "http://<YOUR_TAILSCALE_IP>.nip.io"
+  keycloak:
+    internal_url: "http://keycloak.admin.<YOUR_TAILSCALE_IP>.nip.io"
+    public_url: "http://keycloak.admin.<YOUR_TAILSCALE_IP>.nip.io"
+    realm: "Devsecops_Platform_Users"
+  secrets:
+    name: "customer-01-secrets"
+services:
+  jenkins:
+    enabled: true
+    node_port: 30101
+    client_id: "Jenkins"
+    replicas: 1
+  gitlab:
+    enabled: false
+    node_port: 30102
+    client_id: "Gitlab"
+  nexus:
+    enabled: false
+    node_port: 31083
+    client_id: "nexus"
+  sonarqube:
+    enabled: false
+    node_port: 32410
+    client_id: "sonarqube"
+access:
+  groups:
+    admins: "customer-01-admins"
+    users: "customer-01-users"
+    developers:
+      - "developer1@example.com"
+      - "developer2@example.com"
+  creator_email: "creator@example.com"

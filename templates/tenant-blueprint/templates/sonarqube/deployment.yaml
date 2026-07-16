@@ -1,0 +1,79 @@
+{{- if .Values.services.sonarqube.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.tenant_id }}-postgresql
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: postgresql, tenant: {{ .Values.tenant_id }} } }
+  template:
+    metadata: { labels: { app: postgresql, tenant: {{ .Values.tenant_id }} } }
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:13
+        env:
+        - name: POSTGRES_DB
+          value: sonar
+        - name: POSTGRES_USER
+          value: sonar
+        - name: POSTGRES_PASSWORD
+          value: sonar
+        ports: [{ containerPort: 5432 }]
+        volumeMounts:
+        - name: postgresql-data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgresql-data
+        persistentVolumeClaim:
+          claimName: {{ .Values.tenant_id }}-postgresql-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.tenant_id }}-sonarqube
+spec:
+  replicas: {{ .Values.services.sonarqube.replicas | default 1 }}
+  selector: { matchLabels: { app: sonarqube, tenant: {{ .Values.tenant_id }} } }
+  template:
+    metadata: { labels: { app: sonarqube, tenant: {{ .Values.tenant_id }} } }
+    spec:
+      containers:
+      - name: sonarqube
+        image: sonarqube:community
+        ports: [{ containerPort: 9000 }]
+        env:
+        - name: SONAR_JDBC_URL
+          value: jdbc:postgresql://{{ .Values.tenant_id }}-postgresql:5432/sonar
+        - name: SONAR_JDBC_USERNAME
+          value: sonar
+        - name: SONAR_JDBC_PASSWORD
+          value: sonar
+        - name: SONAR_AUTH_SAML_ENABLED
+          value: "true"
+        - name: SONAR_AUTH_SAML_APPLICATIONID
+          value: "{{ .Values.tenant_id }}-sonarqube"
+        - name: SONAR_AUTH_SAML_PROVIDERNAME
+          value: "Keycloak"
+        - name: SONAR_AUTH_SAML_PROVIDERID
+          value: "{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}"
+        - name: SONAR_AUTH_SAML_LOGINURL
+          value: "{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/saml"
+        - name: SONAR_AUTH_SAML_USERLOGIN
+          value: "login"
+        - name: SONAR_AUTH_SAML_USERNAME
+          value: "name"
+        - name: SONAR_AUTH_SAML_USEREMAIL
+          value: "email"
+        - name: SONAR_AUTH_SAML_GROUPNAME
+          value: "groups"
+        - name: SONAR_AUTH_SAML_GROUP_ADMIN
+          value: "{{ .Values.access.groups.admins }}"
+        volumeMounts:
+        - name: sonarqube-data
+          mountPath: /opt/sonarqube/data
+      volumes:
+      - name: sonarqube-data
+        persistentVolumeClaim:
+          claimName: {{ .Values.tenant_id }}-sonarqube-pvc
+{{- end }}

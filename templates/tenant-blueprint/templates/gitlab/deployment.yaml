@@ -1,0 +1,79 @@
+{{- if .Values.services.gitlab.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.tenant_id }}-gitlab
+spec:
+  replicas: {{ .Values.services.gitlab.replicas | default 1 }}
+  selector: { matchLabels: { app: gitlab, tenant: {{ .Values.tenant_id }} } }
+  template:
+    metadata: { labels: { app: gitlab, tenant: {{ .Values.tenant_id }} } }
+    spec:
+      containers:
+      - name: gitlab
+        image: gitlab/gitlab-ce:latest
+        env:
+        - name: GITLAB_OMNIBUS_CONFIG
+          value: |
+            external_url 'http://git-{{ .Values.tenant_id }}.<YOUR_TAILSCALE_IP>.nip.io'
+            gitlab_rails['initial_root_password'] = '{{ .Values.platform.secrets.data.gitlab_root_password }}'
+            
+            # OIDC Configuration
+            gitlab_rails['omniauth_enabled'] = true
+            gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
+            gitlab_rails['omniauth_sync_email_from_provider'] = 'openid_connect'
+            gitlab_rails['omniauth_sync_profile_from_provider'] = ['openid_connect']
+            gitlab_rails['omniauth_sync_profile_attributes'] = ['name', 'email', 'location']
+            gitlab_rails['omniauth_auto_sign_in_with_provider'] = 'openid_connect'
+            gitlab_rails['omniauth_block_auto_created_users'] = false
+            gitlab_rails['omniauth_providers'] = [
+              {
+                name: 'openid_connect',
+                label: 'Keycloak',
+                args: {
+                  name: 'openid_connect',
+                  scope: ['openid', 'profile', 'email'],
+                  response_type: 'code',
+                  issuer: '{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}',
+                  discovery: true,
+                  client_auth_method: 'query',
+                  uid_field: 'preferred_username',
+                  client_options: {
+                    identifier: '{{ .Values.tenant_id }}-gitlab',
+                    secret: '{{ .Values.platform.secrets.data.gitlab_client_secret }}',
+                    redirect_uri: 'http://git-{{ .Values.tenant_id }}.<YOUR_TAILSCALE_IP>.nip.io/users/auth/openid_connect/callback',
+                  authorization_endpoint: '{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/auth',
+                  token_endpoint: '{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/token',
+                  userinfo_endpoint: '{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/userinfo',
+                  jwks_uri: '{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/certs'
+                }
+            }]
+        - name: GITLAB_OIDC_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.platform.secrets.name | default (printf "%s-secrets" .Values.tenant_id) }}
+              key: gitlab-oidc-client-secret
+        ports: [{ containerPort: 80 }]
+        volumeMounts:
+        - name: gitlab-data
+          mountPath: /var/opt/gitlab
+        - name: custom-init
+          mountPath: /opt/gitlab/embedded/service/gitlab-rails/config/initializers/promote_admins.rb
+          subPath: promote_admins.rb
+        - name: vault-secrets
+          mountPath: "/mnt/secrets"
+          readOnly: true
+      volumes:
+      - name: gitlab-data
+        persistentVolumeClaim:
+          claimName: {{ .Values.tenant_id }}-gitlab-pvc
+      - name: custom-init
+        configMap:
+          name: {{ .Values.tenant_id }}-gitlab-custom-init
+      - name: vault-secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "{{ .Values.tenant_id }}-vault-secrets"
+{{- end }}

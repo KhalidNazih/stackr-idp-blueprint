@@ -1,0 +1,45 @@
+{{- if .Values.services.jenkins.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.tenant_id }}-jenkins-casc
+data:
+  jenkins.yaml: |
+    jenkins:
+      securityRealm:
+        oic:
+          clientId: "{{ .Values.tenant_id }}-jenkins"
+          clientSecret: "${JENKINS_OIDC_SECRET}"
+          disableSslVerification: true
+          serverConfiguration:
+            wellKnown:
+              wellKnownOpenIDConfigurationUrl: "{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/.well-known/openid-configuration"
+              scopesOverride: "openid profile email groups"
+          userNameField: "preferred_username"
+          emailFieldName: "email"
+          fullNameFieldName: "name"
+          groupsFieldName: "groups"
+      authorizationStrategy:
+        roleBased:
+          roles:
+            global:
+              - name: "admin"
+                description: "Jenkins administrators"
+                permissions:
+                  - "Overall/Administer"
+                entries:
+                  - group: "platform-admins"
+                  - group: "{{ .Values.access.groups.admins }}"
+              - name: "tenant-users"
+                description: "Developer access for this specific tenant"
+                permissions:
+                  - "Overall/Read"
+                  - "Job/Build"
+                  - "Job/Create"
+                  - "Job/Read"
+                  - "Job/Workspace"
+                  - "View/Read"
+                  - "View/Create"
+                entries:
+                  - group: "{{ .Values.access.groups.users }}"
+{{- end }}

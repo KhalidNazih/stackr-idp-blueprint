@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: platform-api
+  template:
+    metadata:
+      labels:
+        app: platform-api
+    spec:
+      serviceAccountName: platform-api-sa
+      containers:
+      - name: api
+        image: inetumregister.azurecr.io/stackr/backend/inetumplus-backend:v2
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Loading secrets from OpenBao RAM-disk..."
+            for f in /mnt/secrets/*; do
+              export $(basename $f)=$(cat $f)
+            done
+            echo "Starting Platform API..."
+            exec uvicorn main:app --host 0.0.0.0 --port 8000
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: vault-secrets
+          mountPath: "/mnt/secrets"
+          readOnly: true
+      volumes:
+      - name: vault-secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "platform-api-vault-secrets"

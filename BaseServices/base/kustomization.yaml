@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment/gitlab.yaml
+  - services/gitlab-svc.yaml
+  - pvcs/gitlab-pvcs.yaml
+  - deployment/keycloak.yaml
+  - services/keycloak-svc.yaml
+  - pvcs/keycloak-pvc.yaml
+  - RBAC/platform-api-rbac.yaml
+  - deployment/postgresql.yaml
+  - services/postgresql-svc.yaml
+  - pvcs/postgresql-pvc.yaml
+  - deployment/redis.yaml
+  - services/redis-svc.yaml
+  - pvcs/redis-pvc.yaml
+  - deployment/platform-api.yaml
+  - deployment/openbao-sa.yaml
+  - deployment/openbao.yaml
+  - deployment/platform-shared-secrets.yaml
+  - services/platform-api-svc.yaml
+  - services/openbao-svc.yaml
+  - pvcs/openbao-pvc.yaml
+
+configMapGenerator:
+  - name: openbao-config
+    files:
+      - deployment/openbao-config.hcl

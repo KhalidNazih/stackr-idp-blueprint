@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.tenant_id }}-keycloak-provisioner
+  namespace: admin
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  template:
+    spec:
+      serviceAccountName: {{ .Values.tenant_id }}-ansible-sa
+      restartPolicy: Never
+      containers:
+      - name: ansible
+        image: alpine/ansible:latest
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Installing required system dependencies via apk..."
+            apk add --no-cache py3-pip py3-kubernetes py3-cryptography
+            pip install hvac --break-system-packages
+            echo "Installing required Ansible collections..."
+            ansible-galaxy collection install community.general kubernetes.core community.hashi_vault:>=5.0.0 --force
+            echo "Running provisioning playbook..."
+            ansible-playbook /opt/ansible/playbook.yml
+        env:
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: platform-shared-secrets
+              key: keycloak-admin-password
+        volumeMounts:
+        - name: playbook
+          mountPath: /opt/ansible
+      volumes:
+      - name: playbook
+        configMap:
+          name: {{ .Values.tenant_id }}-provisioner-playbook

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webui
+  namespace: admin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webui
+  template:
+    metadata:
+      labels:
+        app: webui
+    spec:
+      containers:
+        - name: webui
+          image: <YOUR_ACR_NAME>.azurecr.io/platform/frontend/webui:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: KEYCLOAK_INTERNAL_URL
+              value: "http://keycloak-svc.admin:8080"
+            - name: KEYCLOAK_CLIENT_SECRET
+              value: "YOUR_ACTUAL_KEYCLOAK_SECRET"
+            - name: KUBE_TOKEN
+              value: "YOUR_ACTUAL_KUBE_TOKEN"

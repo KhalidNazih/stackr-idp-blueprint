@@ -1,0 +1,18 @@
+{{- if .Values.services.sonarqube.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.tenant_id }}-postgresql
+spec:
+  ports: [{ port: 5432, targetPort: 5432 }]
+  selector: { app: postgresql, tenant: {{ .Values.tenant_id }} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.tenant_id }}-sonarqube
+spec:
+  type: ClusterIP
+  ports: [{ port: 9000, targetPort: 9000}]
+  selector: { app: sonarqube, tenant: {{ .Values.tenant_id }} }
+{{- end }}

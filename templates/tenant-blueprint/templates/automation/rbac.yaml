@@ -1,0 +1,40 @@
+# This RBAC allows the central provisioner to work across namespaces
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.tenant_id }}-ansible-sa
+  namespace: admin
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.tenant_id }}-provisioner-role
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+rules:
+- apiGroups: [""]
+  resources: ["secrets", "namespaces", "configmaps"]
+  verbs: ["get", "create", "patch", "list", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.tenant_id }}-provisioner-rb
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.tenant_id }}-provisioner-role
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.tenant_id }}-ansible-sa
+  namespace: admin

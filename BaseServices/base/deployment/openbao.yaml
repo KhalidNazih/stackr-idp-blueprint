@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openbao
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openbao
+  template:
+    metadata:
+      labels:
+        app: openbao
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: openbao-sa
+      containers:
+      - name: openbao
+        image: openbao/openbao:2.2.0
+        args: ["server", "-config=/bao/config/openbao-config.hcl"]
+        env:
+        - name: BAO_ADDR
+          value: "http://0.0.0.0:8200"
+        - name: VAULT_UI
+          value: "true"
+        ports:
+        - containerPort: 8200
+          name: http
+        volumeMounts:
+        - name: openbao-data
+          mountPath: /bao/data
+        - name: openbao-config
+          mountPath: /bao/config
+      volumes:
+      - name: openbao-data
+        persistentVolumeClaim:
+          claimName: openbao-data-pvc
+      - name: openbao-config
+        configMap:
+          name: openbao-config

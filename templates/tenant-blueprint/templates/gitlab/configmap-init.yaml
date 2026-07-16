@@ -1,0 +1,32 @@
+{{- if .Values.services.gitlab.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.tenant_id }}-gitlab-custom-init
+data:
+  promote_admins.rb: |
+    # Platform Automation: Intercept OIDC login and map groups in CE
+    Warden::Manager.after_set_user do |user, auth, opts|
+      # Only run this for OIDC logins
+      if auth.env['omniauth.auth'] && auth.env['omniauth.auth']['provider'] == 'openid_connect'
+        begin
+          # 1. Extract the groups from the raw Keycloak token
+          # GitLab CE doesn't save this, but it's available in the 'env' during login
+          raw_groups = auth.env['omniauth.auth'].dig('extra', 'raw_info', 'groups') || []
+          
+          # 2. Get the target admin group from Helm values
+          admin_group = "{{ .Values.access.groups.admins }}"
+          
+          # 3. If the user is in the admin group, flip the admin switch
+          if raw_groups.include?(admin_group)
+            unless user.admin?
+              puts "Platform Sync: User #{user.username} is in #{admin_group}. Promoting to Admin..."
+              user.update_attribute(:admin, true)
+            end
+          end
+        rescue => e
+          Rails.logger.error "Platform Sync Error: #{e.message}"
+        end
+      end
+    end
+{{- end }}

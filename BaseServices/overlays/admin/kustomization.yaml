@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - namespace-patch.yaml
+  - postgres-secret.yaml
+  - postgres-spc.yaml
+  - platform-api-spc.yaml
+  - ingress.yaml
+namespace: admin
+
+patches:
+  - path: replicas-patch.yaml

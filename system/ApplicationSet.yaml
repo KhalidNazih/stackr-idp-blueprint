@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: tenant-orchestrator
+  namespace: argocd
+  annotations:
+    platform.refresh: "1"
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        repoURL: http://gitlab.admin/root/platform-gitops.git
+        revision: HEAD
+        requeueAfterSeconds: 60  
+        files:
+          - path: "registry/*.yaml"
+  template:
+    metadata:
+      name: '{{index . "tenant_id"}}-platform'
+    spec:
+      project: default
+      source:
+        repoURL: http://gitlab.admin/root/platform-gitops.git
+        targetRevision: HEAD
+        path: templates/tenant-blueprint
+        helm:
+          valueFiles: ["/registry/{{index . \"tenant_id\"}}.yaml"]
+      destination:
+        server: '{{index . "infrastructure" "cluster_server"}}'
+        namespace: '{{index . "isolation" "namespace"}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

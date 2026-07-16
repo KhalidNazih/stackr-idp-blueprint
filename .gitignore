@@ -1,0 +1,7 @@
+# Ignore the real secret file containing passwords
+system/secrets/shared-secrets.yaml
+
+# Ignore python venv if any
+venv/
+.env
+*.log

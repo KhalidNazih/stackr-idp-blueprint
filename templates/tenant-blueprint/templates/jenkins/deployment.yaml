@@ -1,0 +1,45 @@
+{{- if .Values.services.jenkins.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.tenant_id }}-jenkins
+spec:
+  replicas: {{ .Values.services.jenkins.replicas | default 1 }}
+  selector: { matchLabels: { app: jenkins, tenant: {{ .Values.tenant_id }} } }
+  template:
+    metadata: { labels: { app: jenkins, tenant: {{ .Values.tenant_id }} } }
+    spec:
+      containers:
+      - name: jenkins
+        image: "khalidxx/jenkins_master:v1.0-oidc"
+        ports: [{ containerPort: 8080 }]
+        env:
+        - name: CASC_JENKINS_CONFIG
+          value: /var/jenkins_home/casc_configs/jenkins.yaml
+        - name: JENKINS_OIDC_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.platform.secrets.name | default (printf "%s-secrets" .Values.tenant_id) }}
+              key: jenkins-oidc-client-secret
+        volumeMounts:
+        - name: jenkins-data
+          mountPath: /var/jenkins_home
+        - name: casc-config
+          mountPath: /var/jenkins_home/casc_configs
+        - name: vault-secrets
+          mountPath: "/mnt/secrets"
+          readOnly: true
+      volumes:
+      - name: jenkins-data
+        persistentVolumeClaim:
+          claimName: {{ .Values.tenant_id }}-jenkins-pvc
+      - name: casc-config
+        configMap:
+          name: {{ .Values.tenant_id }}-jenkins-casc
+      - name: vault-secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "{{ .Values.tenant_id }}-vault-secrets"
+{{- end }}
