@@ -170,6 +170,9 @@ Apply the `BaseServices` folder using the standard `admin` overlay to spin up yo
 kubectl apply -k BaseServices/overlays/admin
 ```
 
+> [!NOTE]
+> **Expected Behavior:** Because we deploy everything simultaneously for a complete GitOps state, the `platform-api` and `postgres` pods will be stuck in a `ContainerCreating` crash-loop right now! This is completely normal because they are waiting to mount secrets from OpenBao, but OpenBao is completely empty right now. Don't worry! They will automatically turn green at the end of **Phase 6** when we configure OpenBao.
+
 <img width="826" height="243" alt="image" src="https://github.com/user-attachments/assets/79aa62cf-954e-46d7-80f0-30160d19b7d3" />
 
 ### 3. Identify your Entry Points
@@ -253,11 +256,12 @@ EOF
 ```bash
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 ```
+> **👉 Log In**: Open your browser and navigate to your Ingress URL (e.g., `http://argocd.<YOUR_TAILSCALE_IP>.nip.io`). Log in using the username `admin` and the password you just extracted!
 
 ### 2. Connect GitLab to Argo CD
 1. Open Argo CD UI -> **Settings** -> **Repositories**.
 2. **Connect Repo**: Click **Connect Repo using HTTPS** and configure:
-   * **Repository URL**: `http://gitlab-svc.admin/root/platform-gitops.git` (Use this internal DNS name so it is portable and matches the Orchestrator config!)
+   * **Repository URL**: `http://gitlab.admin/root/platform-gitops.git` (Use this internal DNS name so it is portable and matches the Orchestrator config!)
    * **Username**: `root`
    * **Password**: Your GitLab initial root password or Personal Access Token.
 3. **Settings** -> **Projects**: Ensure the `default` project is ready.
@@ -377,10 +381,10 @@ bao kv put secret/platform/api \
     GITLAB_REGISTRY_PATH="registry" \
     GITLAB_TENANT_REPO="platform-gitops" \
     GITLAB_TOKEN="[PHASE 3 TOKEN]" \
-    GITLAB_URL="http://gitlab-svc.admin" \
+    GITLAB_URL="http://gitlab.admin" \
     KEYCLOAK_CLIENT_ID="admin-cli" \
     KEYCLOAK_CLIENT_SECRET="unused" \
-    KEYCLOAK_INTERNAL_URL="http://keycloak-svc.admin:8080" \
+    KEYCLOAK_INTERNAL_URL="http://keycloak.admin:8080" \
     KEYCLOAK_REALM="master" \
     KUBE_API_URL="https://kubernetes.default.svc" \
     KUBE_TOKEN="[PHASE 6 KUBE_TOKEN]" \
@@ -392,6 +396,16 @@ bao kv put secret/platform/postgres \
     POSTGRES_USER="inetum" \
     POSTGRES_PASSWORD="inetum_secret"
 ```
+
+### 3. Restart the Dependent Pods
+Because the entire architecture was deployed simultaneously, the `platform-api` and `postgres` pods likely got stuck in a `ContainerCreating` loop waiting for these secrets to exist. 
+
+Delete them to force Kubernetes to instantly recreate them so they pull your new secrets immediately!
+```bash
+kubectl delete pod -n admin -l app=platform-api
+kubectl delete pod -n admin -l app=postgres
+```
+
 <img width="956" height="451" alt="image" src="https://github.com/user-attachments/assets/03ca026e-5533-4c04-bec0-14db36e728e1" />
 
 ---

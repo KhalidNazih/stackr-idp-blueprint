@@ -5,7 +5,7 @@ metadata:
 spec:
   provider: vault
   parameters:
-    vaultAddress: "http://openbao-svc.admin:8200"
+    vaultAddress: "http://openbao-svc.admin.svc.cluster.local:8200"
     roleName: "platform-role"
     objects: |
       - objectName: "POSTGRES_DB"

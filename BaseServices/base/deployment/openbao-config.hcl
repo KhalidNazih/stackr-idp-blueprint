@@ -8,10 +8,10 @@ listener "tcp" {
 }
 
 seal "azurekeyvault" {
-  tenant_id  = "<YOUR_AZURE_TENANT_ID>"
-  client_id  = "<YOUR_MANAGED_IDENTITY_CLIENT_ID>"
-  vault_name = "<YOUR_KEY_VAULT_NAME>"
-  key_name   = "openbao-unseal-key"
+  client_id      = "<YOUR_KUBELET_CLIENT_ID>"
+  tenant_id      = "<YOUR_AZURE_TENANT_ID>"
+  vault_name     = "<YOUR_KEY_VAULT_NAME>"
+  key_name       = "openbao-unseal-key"
 }
 
 ui = true
