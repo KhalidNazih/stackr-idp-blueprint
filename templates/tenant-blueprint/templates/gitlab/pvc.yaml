@@ -4,8 +4,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: {{ .Values.tenant_id }}-gitlab-pvc
 spec:
- storageClassName: azurefile-csi 
- accessModes: [ReadWriteMany]
+  storageClassName: managed-csi 
+  accessModes: [ReadWriteOnce]
   resources:
     requests:
       storage: 20Gi

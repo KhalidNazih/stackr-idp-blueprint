@@ -9,6 +9,13 @@ spec:
   template:
     metadata: { labels: { app: nexus, tenant: {{ .Values.tenant_id }} } }
     spec:
+      initContainers:
+      - name: volume-mount-hack
+        image: busybox
+        command: ["sh", "-c", "chown -R 200:200 /nexus-data"]
+        volumeMounts:
+        - name: nexus-data
+          mountPath: /nexus-data
       containers:
       - name: oauth2-proxy
         image: quay.io/oauth2-proxy/oauth2-proxy:latest
