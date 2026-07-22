@@ -441,7 +441,11 @@ kubectl apply -f system/ApplicationSet.yaml
 ```
 
 ### 2. Create a Tenant File
-Create a file like `registry/customer-01.yaml`. Notice we are using Tailscale `nip.io` ingress URLs instead of NodePorts.
+Create a file like `registry/customer-01.yaml`. 
+
+> [!IMPORTANT]
+> **Replace the IP Addresses!**
+> You must manually replace every instance of `<YOUR_TAILSCALE_IP>` in this file with your actual Tailscale IP address before committing. This ensures the tenant's Keycloak realm and application endpoints are routed correctly through your ingress. Notice we are using Tailscale `nip.io` ingress URLs instead of NodePorts.
 ```yaml
 tenant_id: "customer-01"
 display_name: "Customer Project 1"

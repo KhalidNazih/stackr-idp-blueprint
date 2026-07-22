@@ -9,8 +9,8 @@ isolation:
 platform:
   public_base_url: "http://<YOUR_TAILSCALE_IP>.nip.io"
   keycloak:
-    internal_url: "http://keycloak.admin.<YOUR_TAILSCALE_IP>.nip.io"
-    public_url: "http://keycloak.admin.<YOUR_TAILSCALE_IP>.nip.io"
+    internal_url: "http://keycloak-svc.admin:8080"
+    public_url: "http://keycloak.<YOUR_TAILSCALE_IP>.nip.io"
     realm: "Devsecops_Platform_Users"
   secrets:
     name: "customer-01-secrets"
