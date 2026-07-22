@@ -7,7 +7,7 @@ spec:
   ingressClassName: nginx
   rules:
     {{- if .Values.services.jenkins.enabled }}
-    - host: jenkins-{{ .Values.tenant_id }}.<YOUR_TAILSCALE_IP>.nip.io
+    - host: jenkins-{{ .Values.tenant_id }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}
       http:
         paths:
         - path: /
@@ -19,7 +19,7 @@ spec:
                 number: 8080
     {{- end }}
     {{- if .Values.services.gitlab.enabled }}
-    - host: git-{{ .Values.tenant_id }}.<YOUR_TAILSCALE_IP>.nip.io
+    - host: git-{{ .Values.tenant_id }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}
       http:
         paths:
         - path: /
@@ -31,7 +31,7 @@ spec:
                 number: 80
     {{- end }}
     {{- if .Values.services.nexus.enabled }}
-    - host: nexus-{{ .Values.tenant_id }}.<YOUR_TAILSCALE_IP>.nip.io
+    - host: nexus-{{ .Values.tenant_id }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}
       http:
         paths:
         - path: /
@@ -43,7 +43,7 @@ spec:
                 number: 4180
     {{- end }}
     {{- if .Values.services.sonarqube.enabled }}
-    - host: sonar-{{ .Values.tenant_id }}.<YOUR_TAILSCALE_IP>.nip.io
+    - host: sonar-{{ .Values.tenant_id }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}
       http:
         paths:
         - path: /

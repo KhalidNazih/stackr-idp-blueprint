@@ -12,9 +12,13 @@ data:
           clientSecret: "${JENKINS_OIDC_SECRET}"
           disableSslVerification: true
           serverConfiguration:
-            wellKnown:
-              wellKnownOpenIDConfigurationUrl: "{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/.well-known/openid-configuration"
-              scopesOverride: "openid profile email groups"
+            manual:
+              issuer: "{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}"
+              authorizationServerUrl: "{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/auth"
+              tokenServerUrl: "{{ .Values.platform.keycloak.internal_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/token"
+              userInfoServerUrl: "{{ .Values.platform.keycloak.internal_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/userinfo"
+              jwksServerUrl: "{{ .Values.platform.keycloak.internal_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/certs"
+              scopes: "openid profile email groups"
           userNameField: "preferred_username"
           emailFieldName: "email"
           fullNameFieldName: "name"

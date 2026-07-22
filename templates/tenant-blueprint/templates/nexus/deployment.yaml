@@ -25,7 +25,12 @@ spec:
         - --provider=oidc
         - --client-id={{ .Values.tenant_id }}-nexus
         - --oidc-issuer-url={{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}
-        - --redirect-url=http://nexus-{{ .Values.tenant_id }}.<YOUR_TAILSCALE_IP>.nip.io/oauth2/callback
+        - --skip-oidc-discovery=true
+        - --login-url={{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/auth
+        - --redeem-url={{ .Values.platform.keycloak.internal_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/token
+        - --oidc-jwks-url={{ .Values.platform.keycloak.internal_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/certs
+        - --profile-url={{ .Values.platform.keycloak.internal_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/userinfo
+        - --redirect-url=http://nexus-{{ .Values.tenant_id }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}/oauth2/callback
         - --email-domain=*
         - --cookie-secure=false
         - --pass-user-headers=true

@@ -67,33 +67,27 @@ Run the following command to authenticate to your newly provisioned AKS cluster 
 az aks get-credentials --resource-group <RESOURCE_GROUP> --name <CLUSTER_NAME>
 ```
 
-### 5. Create Azure Key Vault & Managed Identity (For OpenBao Auto-Unseal)
-To allow your OpenBao (Vault) to automatically unseal itself when the cluster boots, you must create a Key Vault and use OIDC to link it to your Kubernetes cluster.
+### 5. Create Azure Key Vault (For OpenBao Auto-Unseal)
+To allow your OpenBao (Vault) to automatically unseal itself when the cluster boots, we use the AKS cluster's underlying **Kubelet Identity** to authenticate to an Azure Key Vault. (Note: OpenBao 2.2.0's auto-unseal plugin does not natively support Workload Identity federated credentials, so we leverage the node's built-in identity).
 
 1. **Create the Key Vault & Unseal Key**
-   * Search for **Key vaults** in the portal and create one in your resource group.
-   * Under **Access configuration**, select **Vault access policy**.
+   * Search for **Key vaults** in the portal and create one in your resource group (e.g., `<YOUR_KEY_VAULT_NAME>`).
+   * Under **Access configuration**, ensure **Vault access policy** is selected (Do NOT use Azure role-based access control for the vault).
    * Once created, click **Keys**, then **Generate/Import**. Name it `openbao-unseal-key` (RSA) and create it.
 
-2. **Create the Managed Identity**
-   * Search for **Managed Identities** and create one named `openbao-identity`.
-   * Open it and copy your **Client ID** and **Tenant ID**.
+2. **Retrieve your Kubelet Identity Client ID (UI Method)**
+   * In the Azure Portal, go to your **Resource Groups** and find the "Node Resource Group" (it usually starts with `MC_` and contains your cluster name).
+   * Inside that resource group, locate the **User Assigned Managed Identity** (it typically ends in `-agentpool`).
+   * Click on it and copy the **Client ID**. 
 
-3. **Grant the Identity Access to the Vault**
-   * Go back to your Key Vault, click **Access policies**, and click Create.
-   * For **Key permissions**, select **Get**, **Wrap Key**, and **Unwrap Key**.
-   * For **Principal**, select `openbao-identity` and click Create.
+3. **Grant the Node Identity Access to the Vault (UI Method)**
+   * Go back to your Key Vault (`<YOUR_KEY_VAULT_NAME>`) and click on **Access policies** in the left menu.
+   * Click **Create**.
+   * Under **Key permissions**, select **Get**, **Wrap Key**, and **Unwrap Key**.
+   * Click Next to the **Principal** tab. Search for the name of your agentpool managed identity (the same one you found in step 2) and select it.
+   * Click Next, and then **Create** to save the policy.
 
-4. **Wire it to Kubernetes via OIDC**
-   * Go to your AKS cluster Overview and copy the **OIDC Issuer URL**.
-   * Go to your `openbao-identity` Managed Identity, click **Federated credentials**, and add one:
-     * **Scenario**: Kubernetes accessing Azure resources
-     * **Cluster OIDC issuer URL**: *(paste your URL)*
-     * **Namespace**: `admin`
-     * **Service account**: `openbao-sa`
-     * **Credential name**: `openbao-fed-cred`
-
-Finally, paste your copied **Client ID**, **Tenant ID**, and **Vault Name** into both `BaseServices/base/deployment/openbao-config.hcl` and `BaseServices/base/deployment/openbao-sa.yaml` before running your Kustomize deployment.
+Finally, paste your copied **Client ID** and **Vault Name** into `BaseServices/base/deployment/openbao-config.hcl` before running your Kustomize deployment.
 
 ---
 
@@ -261,7 +255,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 ### 2. Connect GitLab to Argo CD
 1. Open Argo CD UI -> **Settings** -> **Repositories**.
 2. **Connect Repo**: Click **Connect Repo using HTTPS** and configure:
-   * **Repository URL**: `http://gitlab.admin/root/platform-gitops.git` (Use this internal DNS name so it is portable and matches the Orchestrator config!)
+   * **Repository URL**: `http://gitlab.<YOUR_TAILSCALE_IP>.nip.io/<YOUR_GITLAB_GROUP>/platform-gitops.git`
    * **Username**: `root`
    * **Password**: Your GitLab initial root password or Personal Access Token.
 3. **Settings** -> **Projects**: Ensure the `default` project is ready.
@@ -349,7 +343,11 @@ Once initialized, you must configure Vault to allow the Provisioner (Ansible) to
    3. Toggle **Client authentication** to ON, and click Save.
    4. Go to the **Credentials** tab and **Copy the Client Secret** (You will need this for the Web UI and OpenBao).
    5. Go to the **Settings** tab, scroll down to **Valid redirect URIs**, and add `http://platform.<YOUR_TAILSCALE_IP>.nip.io/*`. Click Save.
-
+   6. Go to the **Client scopes** tab, click **Add client scope**, select the `groups` scope you created earlier, and click **Add -> Default**.
+4. **Grant Service Account Permissions**:
+   1. Stay in the `stackr-plus` client settings and go to the **Service account roles** tab.
+   2. Click **Assign role** -> filter by clients and select `realm-management`.
+   3. Select the `manage-users` role and click **Assign**. (This allows the backend to add/remove users from tenant groups).
 
 
 ---
@@ -381,11 +379,11 @@ bao kv put secret/platform/api \
     GITLAB_REGISTRY_PATH="registry" \
     GITLAB_TENANT_REPO="platform-gitops" \
     GITLAB_TOKEN="[PHASE 3 TOKEN]" \
-    GITLAB_URL="http://gitlab.admin" \
-    KEYCLOAK_CLIENT_ID="admin-cli" \
-    KEYCLOAK_CLIENT_SECRET="unused" \
+    GITLAB_URL="http://gitlab.admin:80" \
+    KEYCLOAK_CLIENT_ID="stackr-plus" \
+    KEYCLOAK_CLIENT_SECRET="[PHASE 5 SECRET]" \
     KEYCLOAK_INTERNAL_URL="http://keycloak.admin:8080" \
-    KEYCLOAK_REALM="master" \
+    KEYCLOAK_REALM="Devsecops_Platform_Users" \
     KUBE_API_URL="https://kubernetes.default.svc" \
     KUBE_TOKEN="[PHASE 6 KUBE_TOKEN]" \
     REDIS_URL="redis://redis-svc.admin:6379/0"
@@ -458,7 +456,7 @@ isolation:
 platform:
   public_base_url: "http://<YOUR_TAILSCALE_IP>.nip.io"
   keycloak:
-    internal_url: "http://keycloak-svc.admin:8080"
+    internal_url: "http://keycloak.admin:8080"
     public_url: "http://keycloak.<YOUR_TAILSCALE_IP>.nip.io"
     realm: "Devsecops_Platform_Users"
   secrets:

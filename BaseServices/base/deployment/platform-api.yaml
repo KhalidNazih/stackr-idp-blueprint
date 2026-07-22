@@ -23,6 +23,7 @@ spec:
             for f in /mnt/secrets/*; do
               export $(basename $f)=$(cat $f)
             done
+            export KUBE_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
             echo "Starting Platform API..."
             exec uvicorn main:app --host 0.0.0.0 --port 8000
         ports:

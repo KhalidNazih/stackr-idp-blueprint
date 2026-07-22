@@ -9,7 +9,7 @@ spec:
   goTemplate: true
   generators:
     - git:
-        repoURL: http://gitlab.admin/root/platform-gitops.git
+        repoURL: http://gitlab.<YOUR_TAILSCALE_IP>.nip.io/<YOUR_GITLAB_GROUP>/platform-gitops.git
         revision: HEAD
         requeueAfterSeconds: 60  
         files:
@@ -20,7 +20,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: http://gitlab.admin/root/platform-gitops.git
+        repoURL: http://gitlab.<YOUR_TAILSCALE_IP>.nip.io/<YOUR_GITLAB_GROUP>/platform-gitops.git
         targetRevision: HEAD
         path: templates/tenant-blueprint
         helm:

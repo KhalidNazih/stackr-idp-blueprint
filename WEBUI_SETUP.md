@@ -68,6 +68,9 @@ With your `.env.production` file ready, build the image and push it to your Azur
 # Build the image
 docker build -t <YOUR_ACR_NAME>.azurecr.io/platform/frontend/webui:latest .
 
+# Authenticate with ACR
+az acr login --name <YOUR_ACR_NAME>
+
 # Push to your registry
 docker push <YOUR_ACR_NAME>.azurecr.io/platform/frontend/webui:latest
 ```
@@ -91,7 +94,7 @@ Open `BaseServices/overlays/admin_with_ui/webui.yaml` and update the following p
 ```yaml
           env:
             - name: KEYCLOAK_INTERNAL_URL
-              value: "http://keycloak-svc.admin:8080"
+              value: "http://keycloak.admin:8080"
             - name: BACKEND_URL
               value: "http://platform-api-svc.admin:8000"
             - name: KEYCLOAK_CLIENT_SECRET
@@ -144,3 +147,22 @@ kubectl exec -n admin deploy/postgres -- psql -U stackr -d stackr_platform -c "I
 ```
 
 After running this command, simply refresh the Web UI and you will have full Administrator privileges!
+
+---
+
+## 8. Grant Users API Access (Fix 403 Forbidden)
+
+If you see a 403 Forbidden error when trying to fetch users to assign to a project, it is because Keycloak does not allow normal users to query the user list by default.
+
+To fix this:
+1. Open the Keycloak Admin Console (`http://keycloak.<YOUR_TAILSCALE_IP>.nip.io`).
+2. Make sure you are in the `Devsecops_Platform_Users` realm.
+3. In the left navigation menu, under **Manage**, click on **Realm roles** (Do NOT click Realm settings).
+4. Click on the role named `default-roles-devsecops_platform_users`.
+5. Click on the **Role mapping** (or Associated roles) tab.
+6. Click the **Assign role** button.
+7. Change the top dropdown from "Filter by realm roles" to **"Filter by clients"**.
+8. Search for `realm-management` and check the box next to **`view-users`**.
+9. Click **Assign**.
+
+This allows any logged-in user to fetch the list of users to add them to their projects without getting a 403 error.

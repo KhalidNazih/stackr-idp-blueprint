@@ -15,7 +15,7 @@ spec:
         env:
         - name: GITLAB_OMNIBUS_CONFIG
           value: |
-            external_url 'http://git-{{ .Values.tenant_id }}.<YOUR_TAILSCALE_IP>.nip.io'
+            external_url 'http://git-{{ .Values.tenant_id }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}'
             gitlab_rails['initial_root_password'] = '{{ .Values.platform.secrets.data.gitlab_root_password }}'
             
             # OIDC Configuration
@@ -41,11 +41,11 @@ spec:
                   client_options: {
                     identifier: '{{ .Values.tenant_id }}-gitlab',
                     secret: '{{ .Values.platform.secrets.data.gitlab_client_secret }}',
-                    redirect_uri: 'http://git-{{ .Values.tenant_id }}.<YOUR_TAILSCALE_IP>.nip.io/users/auth/openid_connect/callback',
+                    redirect_uri: 'http://git-{{ .Values.tenant_id }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}/users/auth/openid_connect/callback',
                   authorization_endpoint: '{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/auth',
-                  token_endpoint: '{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/token',
-                  userinfo_endpoint: '{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/userinfo',
-                  jwks_uri: '{{ .Values.platform.keycloak.public_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/certs'
+                  token_endpoint: '{{ .Values.platform.keycloak.internal_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/token',
+                  userinfo_endpoint: '{{ .Values.platform.keycloak.internal_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/userinfo',
+                  jwks_uri: '{{ .Values.platform.keycloak.internal_url }}/realms/{{ .Values.platform.keycloak.realm }}/protocol/openid-connect/certs'
                 }
             }]
         - name: GITLAB_OIDC_SECRET

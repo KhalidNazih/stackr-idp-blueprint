@@ -99,10 +99,10 @@ data:
             public_client: false
             standard_flow_enabled: true
             redirect_uris:
-                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.<YOUR_TAILSCALE_IP>.nip.io/*"
-                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.<YOUR_TAILSCALE_IP>.nip.io/securityRealm/finishLogin"
-                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.<YOUR_TAILSCALE_IP>.nip.io/oauth2/callback"
-                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.<YOUR_TAILSCALE_IP>.nip.io/users/auth/openid_connect/callback"    
+                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}/*"
+                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}/securityRealm/finishLogin"
+                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}/oauth2/callback"
+                  - "http://{{ `{{ item.key }}` }}-{{ `{{ tenant_id }}` }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}/users/auth/openid_connect/callback"    
             default_client_scopes:
               - "groups"
               - "profile"
@@ -138,7 +138,7 @@ data:
               saml.server.signature: "true"
               saml.assertion.signature: "true"
               saml.force.post.binding: "true"
-            redirect_uris: ["http://sonar-{{ `{{ tenant_id }}` }}.<YOUR_TAILSCALE_IP>.nip.io/oauth2/callback/saml"]
+            redirect_uris: ["http://sonar-{{ `{{ tenant_id }}` }}.{{ trimPrefix "http://" (trimPrefix "https://" .Values.platform.public_base_url) }}/oauth2/callback/saml"]
           when: services.sonarqube.enabled
 
         - name: Get Admin Token 

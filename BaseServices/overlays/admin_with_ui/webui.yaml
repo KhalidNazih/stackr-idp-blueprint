@@ -25,15 +25,15 @@ spec:
             - name: BACKEND_URL
               value: "http://platform-api-svc.admin:8000"
             - name: AUTH_URL
-              value: "http://platform.100.85.15.6.nip.io"
+              value: "http://platform.<YOUR_TAILSCALE_IP>.nip.io"
             - name: AUTH_TRUST_HOST
               value: "true"
             - name: NEXT_PUBLIC_APP_URL
-              value: "http://platform.100.85.15.6.nip.io"
+              value: "http://platform.<YOUR_TAILSCALE_IP>.nip.io"
             - name: NEXT_PUBLIC_KEYCLOAK_URL
-              value: "http://keycloak.100.85.15.6.nip.io"
+              value: "http://keycloak.<YOUR_TAILSCALE_IP>.nip.io"
             - name: NEXTAUTH_URL
-              value: "http://platform.100.85.15.6.nip.io"
+              value: "http://platform.<YOUR_TAILSCALE_IP>.nip.io"
           command: ["/bin/sh", "-c"]
           args:
             - |
