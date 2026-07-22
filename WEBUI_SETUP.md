@@ -30,7 +30,7 @@ In your newly cloned frontend directory, create a `.env.production` file configu
 # Inetum+ Platform — Environment Variables (Production / AKS)
 # ─────────────────────────────────────────────────────────────────────────────
 
-NEXT_PUBLIC_APP_URL=http://stackr.<YOUR_TAILSCALE_IP>.nip.io
+NEXT_PUBLIC_APP_URL=http://platform.<YOUR_TAILSCALE_IP>.nip.io
 NEXT_PUBLIC_APP_ENV=production
 
 # Public URL used by the browser for SSO redirects
@@ -51,9 +51,12 @@ NEXT_PUBLIC_ARGOCD_URL=http://argocd.<YOUR_TAILSCALE_IP>.nip.io
 # Cluster Base URL (per-tenant tool links)
 NEXT_PUBLIC_CLUSTER_BASE_URL=http://<YOUR_TAILSCALE_IP>.nip.io
 
-# FastAPI Backend
-NEXT_PUBLIC_API_URL=http://platform-api.<YOUR_TAILSCALE_IP>.nip.io
+# FastAPI Backend (Must be /backend to use the Next.js API Proxy)
+NEXT_PUBLIC_API_URL=/backend
 ```
+
+> **⚠️ CRITICAL: API Proxy Configuration**
+> The `NEXT_PUBLIC_API_URL` must be set to `/backend`. This ensures the browser sends API requests through the Next.js internal proxy (`app/backend/[...path]/route.ts`), which is necessary to forward Keycloak authentication cookies securely and avoid CORS issues. The internal proxy will then forward the traffic to the cluster-internal `BACKEND_URL` (configured in step 4).
 
 ---
 
@@ -89,10 +92,18 @@ Open `BaseServices/overlays/admin_with_ui/webui.yaml` and update the following p
           env:
             - name: KEYCLOAK_INTERNAL_URL
               value: "http://keycloak-svc.admin:8080"
+            - name: BACKEND_URL
+              value: "http://platform-api-svc.admin:8000"
             - name: KEYCLOAK_CLIENT_SECRET
               value: "YOUR_ACTUAL_KEYCLOAK_SECRET"
             - name: KUBE_TOKEN
               value: "YOUR_ACTUAL_KUBE_TOKEN"
+            - name: NEXTAUTH_URL
+              value: "http://platform.<YOUR_TAILSCALE_IP>.nip.io"
+            - name: AUTH_URL
+              value: "http://platform.<YOUR_TAILSCALE_IP>.nip.io"
+            - name: AUTH_TRUST_HOST
+              value: "true"
 ```
 
 ---
@@ -102,7 +113,7 @@ Open `BaseServices/overlays/admin_with_ui/webui.yaml` and update the following p
 Open `BaseServices/overlays/admin_with_ui/webui-ingress.yaml` and replace `<YOUR_TAILSCALE_IP>` with your actual Tailscale IP:
 
 ```yaml
-  - host: stackr.<YOUR_TAILSCALE_IP>.nip.io
+  - host: platform.<YOUR_TAILSCALE_IP>.nip.io
 ```
 
 ---
@@ -116,6 +127,6 @@ Run the following command from the root of your GitOps repository:
 kubectl apply -k BaseServices/overlays/admin_with_ui
 ```
 
-Your Developer Portal is now live and accessible over your VPN at `http://stackr.<YOUR_TAILSCALE_IP>.nip.io`.
+Your Developer Portal is now live and accessible over your VPN at `http://platform.<YOUR_TAILSCALE_IP>.nip.io`.
 
 🎉 **Congratulations! Your Multi-Tenant GitOps Platform is 100% complete.**

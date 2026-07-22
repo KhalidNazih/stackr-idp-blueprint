@@ -181,8 +181,8 @@ The platform uses NGINX Ingress combined with Tailscale and wildcard DNS via `ni
 **Take note of your Ingress URLs:**
 *   **GitLab**: `http://gitlab.<YOUR_TAILSCALE_IP>.nip.io`
 *   **Keycloak**: `http://keycloak.<YOUR_TAILSCALE_IP>.nip.io`
-*   **OpenBao**: `http://openbao.<YOUR_TAILSCALE_IP>.nip.io`
-*   **Platform API**: `http://platform-api.<YOUR_TAILSCALE_IP>.nip.io`
+*   **OpenBao**: `http://vault.<YOUR_TAILSCALE_IP>.nip.io`
+*   **Platform API**: `http://api.<YOUR_TAILSCALE_IP>.nip.io`
 
 ---
 
@@ -348,7 +348,7 @@ Once initialized, you must configure Vault to allow the Provisioner (Ansible) to
    2. Set **Client type** to `OpenID Connect` and **Client ID** to `inetum-plus`. Click Next.
    3. Toggle **Client authentication** to ON, and click Save.
    4. Go to the **Credentials** tab and **Copy the Client Secret** (You will need this for the Web UI and OpenBao).
-   5. Go to the **Settings** tab, scroll down to **Valid redirect URIs**, and add `http://stackr.<YOUR_TAILSCALE_IP>.nip.io/*`. Click Save.
+   5. Go to the **Settings** tab, scroll down to **Valid redirect URIs**, and add `http://platform.<YOUR_TAILSCALE_IP>.nip.io/*`. Click Save.
 
 <img width="1634" height="437" alt="image" src="https://github.com/user-attachments/assets/9b4c67f4-07e9-4be8-b372-d477788f7b32" />
 
@@ -507,6 +507,11 @@ git push origin main
 | **CSI Driver** | `kubectl get secretproviderclasspodstatuses -A` | Verify secret projection into RAM |
 | **Provisioner** | `kubectl logs -n [NS] -l job-name=provisioner` | Debug Ansible Keycloak automation |
 | **Global Events** | `kubectl get events -A --sort-by='.lastTimestamp' \| tail -n 20` | See the latest cluster errors |
+| **Stuck Pods** | `kubectl get pods -A \| grep -v 'Running\|Completed'` | Quickly find crashing or stuck pods across all namespaces |
+| **Pod Errors** | `kubectl describe pod -n <ns> <pod>` | Debug `ContainerCreating` errors (e.g., `FailedAttachVolume`, `FailedMount`) |
+| **Crash Logs** | `kubectl logs -n <ns> -l app=<app-name>` | Debug application start crashes (e.g., Postgres `lost+found` error) |
+| **CSI Drivers** | `kubectl get pods -n kube-system \| grep csi` | Verify Azure Secrets & Storage CSI drivers are running |
+| **Azure Disk Fix** | `kubectl scale deploy <name> -n <ns> --replicas=0`<br>`sleep 15`<br>`kubectl scale deploy <name> -n <ns> --replicas=1` | Fix Azure "Dangling Disk Attachment" deadlocks (`FailedAttachVolume`) by forcing the cluster autoscaler to detach/recreate |
 
 <img width="959" height="426" alt="argocd_ui" src="https://github.com/user-attachments/assets/c2e2ae90-5bbb-462e-a761-9ec14f52753e" />
 

@@ -21,8 +21,36 @@ spec:
             - containerPort: 3000
           env:
             - name: KEYCLOAK_INTERNAL_URL
-              value: "http://keycloak-svc.admin:8080"
-            - name: KEYCLOAK_CLIENT_SECRET
-              value: "YOUR_ACTUAL_KEYCLOAK_SECRET"
-            - name: KUBE_TOKEN
-              value: "YOUR_ACTUAL_KUBE_TOKEN"
+              value: "http://keycloak.admin:8080"
+            - name: BACKEND_URL
+              value: "http://platform-api-svc.admin:8000"
+            - name: AUTH_URL
+              value: "http://platform.100.85.15.6.nip.io"
+            - name: AUTH_TRUST_HOST
+              value: "true"
+            - name: NEXT_PUBLIC_APP_URL
+              value: "http://platform.100.85.15.6.nip.io"
+            - name: NEXT_PUBLIC_KEYCLOAK_URL
+              value: "http://keycloak.100.85.15.6.nip.io"
+            - name: NEXTAUTH_URL
+              value: "http://platform.100.85.15.6.nip.io"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Loading secrets from OpenBao RAM-disk..."
+              for f in /mnt/secrets/*; do
+                export $(basename $f)=$(cat $f)
+              done
+              echo "Starting WebUI..."
+              exec node server.js
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: "/mnt/secrets"
+              readOnly: true
+      volumes:
+        - name: vault-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "platform-api-vault-secrets"
