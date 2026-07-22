@@ -21,7 +21,7 @@ resource "azurerm_resource_group" "rg" {
 
 # 2. Create Azure Container Registry (ACR)
 resource "azurerm_container_registry" "acr" {
-  name                = "<YOUR_ACR_NAME>" # Must be globally unique, e.g. inetumregister
+  name                = "<YOUR_ACR_NAME>" # Must be globally unique, e.g. stackrregistry
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   sku                 = "Basic"

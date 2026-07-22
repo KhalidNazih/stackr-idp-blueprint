@@ -15,7 +15,7 @@ spec:
       serviceAccountName: platform-api-sa
       containers:
       - name: api
-        image: inetumregister.azurecr.io/stackr/backend/inetumplus-backend:v2
+        image: <YOUR_ACR_NAME>.azurecr.io/stackr/backend/stackr-backend:v2
         command: ["/bin/sh", "-c"]
         args:
           - |

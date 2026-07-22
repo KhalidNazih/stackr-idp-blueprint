@@ -48,19 +48,19 @@ We enabled two critical security add-ons required for your GitOps architecture:
 
 **Create Azure AKS Cluster:**
 Create your AKS cluster through the Azure Portal using the exact configuration specified above.
-<img width="959" height="448" alt="create_azure_aks" src="https://github.com/user-attachments/assets/6a53e9f9-ad50-49db-9da0-e42bf228f00c" />
+
 
 ### 2. Create Azure Container Registry (ACR)
 Create an ACR to store your custom container images (e.g., `<YOUR_ACR_NAME>.azurecr.io`).
-<img width="920" height="417" alt="acr_deployed" src="https://github.com/user-attachments/assets/99935c62-d247-4bb3-8ccb-51fab392873a" />
+
 
 ### 3. Attach ACR to AKS
 Attach the ACR to the AKS cluster so the cluster can pull images securely without manual Docker logins.
-<img width="955" height="355" alt="attach_acr_to_aks" src="https://github.com/user-attachments/assets/64857fa4-ca0f-4b65-b448-fa504e961060" />
+
 
 ### 4. Push Platform API to ACR
 Build and push your backend platform image to the registry (e.g., `<YOUR_ACR_NAME>.azurecr.io/platform/backend/platform-api`).
-<img width="808" height="395" alt="platform_api_pushed_to_acr" src="https://github.com/user-attachments/assets/2799d556-7589-4ea4-a5ae-cfb561c570fa" />
+
 
 Run the following command to authenticate to your newly provisioned AKS cluster locally:
 ```bash
@@ -103,11 +103,11 @@ Our security posture mandates that no services are exposed to the public interne
 
 ### 1. Install NGINX Ingress Controller
 Install the F5 NGINX Ingress Controller. Configure it as an internal load balancer so it isn't assigned a public IP by Azure.
-<img width="684" height="341" alt="install_the_f5_nginx_ingress_controller_internal" src="https://github.com/user-attachments/assets/9633b0fe-cc44-4928-bef1-9059e839c9b1" />
+
 
 ### 2. Install & Configure Tailscale Operator
 Install the Tailscale Kubernetes Operator. You will need to provide an OAuth client ID and secret or an Auth Key from your Tailscale Admin Console.
-<img width="634" height="392" alt="install_tailscale2" src="https://github.com/user-attachments/assets/7a633b4c-fcd5-47ac-93a8-ec5e306117bd" />
+
 
 
 ### 3. Expose NGINX to Tailnet
@@ -116,11 +116,11 @@ By annotating the NGINX Ingress LoadBalancer service, the Tailscale Operator int
 # Add this annotation to your NGINX LoadBalancer service
 tailscale.com/expose: "true"
 ```
-<img width="766" height="357" alt="tailscale_proxy_pod" src="https://github.com/user-attachments/assets/f4bd5176-8e14-42e0-9da6-a8abe18f6028" />
+
 
 
 Once connected, your NGINX Ingress Controller will appear as a new device in your Tailscale Admin Console. Take note of its assigned Tailscale IP (e.g., `<YOUR_TAILSCALE_IP>`).
-<img width="863" height="285" alt="new_device_tailsale_nginx" src="https://github.com/user-attachments/assets/c26cc61c-5c1f-476e-a240-06210229114c" />
+
 
 ### 4. Connect Your Laptop to the Tailnet
 Because all ingress traffic is completely private, you cannot access the cluster from the public internet. To interact with your GitOps Platform from your laptop:
@@ -173,7 +173,7 @@ kubectl apply -k BaseServices/overlays/admin
 > [!NOTE]
 > **Expected Behavior:** Because we deploy everything simultaneously for a complete GitOps state, the `platform-api` and `postgres` pods will be stuck in a `ContainerCreating` crash-loop right now! This is completely normal because they are waiting to mount secrets from OpenBao, but OpenBao is completely empty right now. Don't worry! They will automatically turn green at the end of **Phase 6** when we configure OpenBao.
 
-<img width="826" height="243" alt="image" src="https://github.com/user-attachments/assets/79aa62cf-954e-46d7-80f0-30160d19b7d3" />
+
 
 ### 3. Identify your Entry Points
 The platform uses NGINX Ingress combined with Tailscale and wildcard DNS via `nip.io` for secure private routing. Assuming your Tailscale Ingress IP is `<YOUR_TAILSCALE_IP>`:
@@ -202,7 +202,7 @@ The platform uses NGINX Ingress combined with Tailscale and wildcard DNS via `ni
 2. Create a token named `PLATFORM_ADMIN_TOKEN` with `api` scope.
 3. **SAVE THIS**. You will need it for the Platform API.
 
-<img width="742" height="401" alt="image" src="https://github.com/user-attachments/assets/9b03989e-899b-4d0c-8980-4705f3145801" />
+
 
 ---
 
@@ -265,13 +265,13 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
    * **Username**: `root`
    * **Password**: Your GitLab initial root password or Personal Access Token.
 3. **Settings** -> **Projects**: Ensure the `default` project is ready.
-<img width="845" height="158" alt="image" src="https://github.com/user-attachments/assets/b7c9bdf6-30ae-4942-ba13-9967efaedb33" />
+
 
 ### 3. Generate the ARGOCD_TOKEN (Web UI)
 1. Go to **Settings** -> **Accounts** -> Select `admin`.
 2. Click **Generate Token**. Set ID to `platform-api` and Expiration to `No Expiry`.
 3. **SAVE THIS**.
-<img width="844" height="443" alt="image" src="https://github.com/user-attachments/assets/2a1759a0-faa6-4c0c-a5e6-6cae2d00d48c" />
+
 ---
 
 ## 🔐 Phase 5: The Foundation (OpenBao & Keycloak)
@@ -345,12 +345,12 @@ Once initialized, you must configure Vault to allow the Provisioner (Ansible) to
    4. Set the **Token Claim Name** to `groups`. Ensure **Add to ID token** and **Add to access token** are toggled on.
 3. **Create the Platform Client (For Web UI & API)**:
    1. Go to **Clients** -> **Create client**.
-   2. Set **Client type** to `OpenID Connect` and **Client ID** to `inetum-plus`. Click Next.
+   2. Set **Client type** to `OpenID Connect` and **Client ID** to `stackr-plus`. Click Next.
    3. Toggle **Client authentication** to ON, and click Save.
    4. Go to the **Credentials** tab and **Copy the Client Secret** (You will need this for the Web UI and OpenBao).
    5. Go to the **Settings** tab, scroll down to **Valid redirect URIs**, and add `http://platform.<YOUR_TAILSCALE_IP>.nip.io/*`. Click Save.
 
-<img width="1634" height="437" alt="image" src="https://github.com/user-attachments/assets/9b4c67f4-07e9-4be8-b372-d477788f7b32" />
+
 
 ---
 
@@ -360,7 +360,7 @@ Once initialized, you must configure Vault to allow the Provisioner (Ansible) to
 ```bash
 kubectl get secret platform-api-token -n admin -o jsonpath='{.data.token}' | base64 -d
 ```
-<img width="1694" height="166" alt="image" src="https://github.com/user-attachments/assets/148653a5-7a30-4248-9391-09d644bf7532" />
+
 
 ### 2. Inject into OpenBao
 Login to OpenBao and write the `platform/api` secret:
@@ -374,7 +374,7 @@ bao kv put secret/platform/api \
     API_SECRET_KEY="[YOUR_CUSTOM_RANDOM_KEY]" \
     ARGOCD_TOKEN="[PHASE 4 TOKEN]" \
     ARGOCD_URL="http://argocd-server.argocd" \
-    DATABASE_URL="postgresql+asyncpg://inetum:inetum_secret@postgres-svc.admin:5432/inetum_platform" \
+    DATABASE_URL="postgresql+asyncpg://stackr:stackr_secret@postgres-svc.admin:5432/stackr_platform" \
     GITLAB_DEFAULT_BRANCH="main" \
     GITLAB_GROUP="[YOUR_GITLAB_GROUP]" \
     GITLAB_PROJECT_ID="[YOUR_REPO_ID]" \
@@ -392,9 +392,9 @@ bao kv put secret/platform/api \
 
 # Also write the platform Postgres credentials:
 bao kv put secret/platform/postgres \
-    POSTGRES_DB="inetum_platform" \
-    POSTGRES_USER="inetum" \
-    POSTGRES_PASSWORD="inetum_secret"
+    POSTGRES_DB="stackr_platform" \
+    POSTGRES_USER="stackr" \
+    POSTGRES_PASSWORD="stackr_secret"
 ```
 
 ### 3. Restart the Dependent Pods
@@ -406,7 +406,7 @@ kubectl delete pod -n admin -l app=platform-api
 kubectl delete pod -n admin -l app=postgres
 ```
 
-<img width="956" height="451" alt="image" src="https://github.com/user-attachments/assets/03ca026e-5533-4c04-bec0-14db36e728e1" />
+
 
 ---
 
@@ -513,7 +513,7 @@ git push origin main
 | **CSI Drivers** | `kubectl get pods -n kube-system \| grep csi` | Verify Azure Secrets & Storage CSI drivers are running |
 | **Azure Disk Fix** | `kubectl scale deploy <name> -n <ns> --replicas=0`<br>`sleep 15`<br>`kubectl scale deploy <name> -n <ns> --replicas=1` | Fix Azure "Dangling Disk Attachment" deadlocks (`FailedAttachVolume`) by forcing the cluster autoscaler to detach/recreate |
 
-<img width="959" height="426" alt="argocd_ui" src="https://github.com/user-attachments/assets/c2e2ae90-5bbb-462e-a761-9ec14f52753e" />
+
 
 ---
 

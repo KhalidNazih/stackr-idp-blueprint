@@ -27,7 +27,7 @@ In your newly cloned frontend directory, create a `.env.production` file configu
 
 ```env
 # ─────────────────────────────────────────────────────────────────────────────
-# Inetum+ Platform — Environment Variables (Production / AKS)
+# Stackr Platform — Environment Variables (Production / AKS)
 # ─────────────────────────────────────────────────────────────────────────────
 
 NEXT_PUBLIC_APP_URL=http://platform.<YOUR_TAILSCALE_IP>.nip.io
@@ -36,7 +36,7 @@ NEXT_PUBLIC_APP_ENV=production
 # Public URL used by the browser for SSO redirects
 NEXT_PUBLIC_KEYCLOAK_URL=http://keycloak.<YOUR_TAILSCALE_IP>.nip.io
 NEXT_PUBLIC_KEYCLOAK_REALM=Devsecops_Platform_Users
-NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=inetum-plus
+NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=stackr-plus
 
 # GitLab Admin (Central Source of Truth)
 NEXT_PUBLIC_GITLAB_URL=http://gitlab.<YOUR_TAILSCALE_IP>.nip.io
@@ -85,7 +85,7 @@ Open `BaseServices/overlays/admin_with_ui/webui.yaml` and update the following p
 3.  **`KUBE_TOKEN`**: Paste your Kubernetes Service Account Token.
 
 > 💡 **Where do I get these secrets?**
-> - **KEYCLOAK_CLIENT_SECRET**: You created this in Phase 5! Log into Keycloak -> Clients -> `inetum-plus` -> Credentials, and copy the Secret.
+> - **KEYCLOAK_CLIENT_SECRET**: You created this in Phase 5! Log into Keycloak -> Clients -> `stackr-plus` -> Credentials, and copy the Secret.
 > - **KUBE_TOKEN**: You created this in Phase 6 for the Platform API! Use the exact same token here.
 
 ```yaml
@@ -130,3 +130,17 @@ kubectl apply -k BaseServices/overlays/admin_with_ui
 Your Developer Portal is now live and accessible over your VPN at `http://platform.<YOUR_TAILSCALE_IP>.nip.io`.
 
 🎉 **Congratulations! Your Multi-Tenant GitOps Platform is 100% complete.**
+
+---
+
+## 7. Promote Your First Administrator
+
+By default, any user who registers in Keycloak and logs into the Developer Portal will be assigned the `guest` or `tenant_user` role. To access the **Admin Center** and manage the platform, you must promote your first account directly in the PostgreSQL database.
+
+Once you have created your first account in Keycloak, run the following command to promote it (replace `YOUR_EMAIL@EXAMPLE.COM` with your exact Keycloak email):
+
+```bash
+kubectl exec -n admin deploy/postgres -- psql -U stackr -d stackr_platform -c "INSERT INTO platform_users (id, email, role, can_manage_projects, enabled, name) VALUES (gen_random_uuid(), 'YOUR_EMAIL@EXAMPLE.COM', 'admin', true, true, 'Platform Admin') ON CONFLICT (email) DO UPDATE SET role = 'admin';"
+```
+
+After running this command, simply refresh the Web UI and you will have full Administrator privileges!
